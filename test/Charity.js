@@ -1,8 +1,5 @@
-const {
-    time,
-    loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+const { time, loadFixture, } = require("@nomicfoundation/hardhat-network-helpers");
+
 const { expect } = require("chai");
 
 describe("Charity", function () {
@@ -18,7 +15,7 @@ describe("Charity", function () {
 
     describe("Deployment", function () {
         it("should set the right owner", async function () {
-            const { contractInstance, owner, contractCreator } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             expect(await contractInstance.owner()).to.equal(owner.address);
         });
@@ -26,7 +23,7 @@ describe("Charity", function () {
 
     describe("Ownership", function () {
         it("should allow the owner to transfer ownership", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.transferOwnership(otherAccount.address);
 
@@ -34,7 +31,7 @@ describe("Charity", function () {
         });
 
         it("should not allow a non-owner to transfer ownership", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             await expect(contractInstance.connect(otherAccount).transferOwnership(otherAccount.address)).to.be.revertedWith("Only the owner can perform this action.");
         });
@@ -42,7 +39,7 @@ describe("Charity", function () {
 
     describe("Charities", function () {
         it("should create a charity", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
 
@@ -51,7 +48,7 @@ describe("Charity", function () {
         });
 
         it("should return all charities", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity1", "Test Description1", 50000, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
             await contractInstance.createNewCharityCause("Test Charity2", "Test Description2", 100, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
@@ -62,7 +59,7 @@ describe("Charity", function () {
 
     describe("Donations", async function () {
         it("should allow a user to donate to a charity", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: 100 });
@@ -73,13 +70,13 @@ describe("Charity", function () {
         });
 
         it("should trow if the user tries to donate to a charity that does not exist", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             await expect(contractInstance.connect(otherAccount).donateToCharity(10, { value: 100 })).to.be.revertedWith("Charity should exists!");
         });
 
         it("should throw if user tries to donate to a charity with fulfilled target", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: 105 });
@@ -91,7 +88,7 @@ describe("Charity", function () {
     describe("suggest new target address", async function () {
 
         it("should allow the charity creator to suggest a target address change", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
@@ -103,7 +100,7 @@ describe("Charity", function () {
         });
 
         it("should emit event when a charity creator suggests a target address change", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
@@ -121,11 +118,14 @@ describe("Charity", function () {
         });
 
         it("should throw if the charity struct have property addressChangedOnce set to true", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, '0x106D801337670aa15bBF286Bd35080f8e3A36EA8');
+
+            //forwad time with 30 seconds
+            time.increase(time.duration.seconds(30));
 
             await contractInstance.connect(owner).changeTargetAddress(1);
 
@@ -133,7 +133,7 @@ describe("Charity", function () {
         });
 
         it("should throw if address already proposed", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
@@ -143,7 +143,7 @@ describe("Charity", function () {
         });
 
         it("should throw if the new address is the same as the current one", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
@@ -151,7 +151,7 @@ describe("Charity", function () {
         });
 
         it("should throw if the new address is the null address", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
@@ -162,13 +162,16 @@ describe("Charity", function () {
     describe("change target address", async function () {
 
         it("should allow the charity creator to change the target address", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+              //forwad time with 30 seconds
+              time.increase(time.duration.seconds(30));
 
             await contractInstance.connect(owner).changeTargetAddress(1);
 
@@ -177,13 +180,16 @@ describe("Charity", function () {
 
         it("should set 'addressChangedOnce' property to true", async function () {
 
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+              //forwad time with 30 seconds
+              time.increase(time.duration.seconds(30));
 
             await contractInstance.connect(owner).changeTargetAddress(1);
 
@@ -192,13 +198,16 @@ describe("Charity", function () {
 
         it("should delete address proposal", async function () {
 
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+              //forwad time with 30 seconds
+              time.increase(time.duration.seconds(30));
 
             await contractInstance.connect(owner).changeTargetAddress(1);
 
@@ -214,15 +223,37 @@ describe("Charity", function () {
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
 
+              //forwad time with 30 seconds
+              time.increase(time.duration.seconds(30));
+
             await expect(contractInstance.connect(otherAccount).changeTargetAddress(1)).to.be.revertedWith("Only the creater of the charity creater can call this function!");
         });
 
         it("should throw if charity don't have a new address proposal", async function () {
-            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
 
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
+              //forwad time with 30 seconds
+              time.increase(time.duration.seconds(30));
+
             await expect(contractInstance.connect(owner).changeTargetAddress(1)).to.be.revertedWith("Only charities with a new target address can call this function!");
+        });
+
+        //value should be 7 days!!!
+        it("should throw if 30 seconds haven't passed since the proposal", async function () {
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
+
+            await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
+
+            const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
+
+            await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+              //forwad time with 20 seconds
+              time.increase(time.duration.seconds(20));
+
+            await expect(contractInstance.connect(owner).changeTargetAddress(1)).to.be.revertedWith("30 seconds should pass!");
         });
     });
 
@@ -230,11 +261,11 @@ describe("Charity", function () {
 
         it("should allow charity contributor to withdrow certain amount of their donation if new target address is proposed", async function () {
             const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
-            
+
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
-            
+
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: 1000000000000000 });
-            
+
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
             //1000000000000000 wei = 1 ether
@@ -244,7 +275,7 @@ describe("Charity", function () {
 
             //get otherAccount balance before withdraw
             const otherAccountBalanceBefore = await ethers.provider.getBalance(otherAccount.address);
-            
+
             await contractInstance.connect(otherAccount).withdrawFundsFromCharity(1, 1000000000000000 / 2);
 
             expect(await contractInstance.charityContributors(1, otherAccount.address)).to.be.equal(1000000000000000 / 2);
@@ -257,11 +288,11 @@ describe("Charity", function () {
 
         it("should allow only charity contributor to withdrow if new target address is proposed", async function () {
             const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
-            
+
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
-            
+
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: 1000000000000000 });
-            
+
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
             await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
@@ -271,7 +302,7 @@ describe("Charity", function () {
 
         it("should throw if charity don't have a new address proposal", async function () {
             const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
-            
+
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
 
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: 1000000000000000 });
@@ -281,17 +312,17 @@ describe("Charity", function () {
     });
 
     describe("send donated funds to target address", async function () {
-        
+
         it("should send all collected funds to target address", async function () {
 
             const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
             const targetFunds = 1000000000000000;
-            
+
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", targetFunds, owner.address);
-            
+
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: targetFunds });
-            
+
             const targetAddressBalanceBefore = await ethers.provider.getBalance(owner.address);
 
             await contractInstance.connect(owner).withdrawCallectedFunds(1);
@@ -303,16 +334,16 @@ describe("Charity", function () {
         });
 
         it("should throw if charity target is not fulfilled", async function () {
-                
-                const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
-    
-                const targetFunds = 1000000000000000;
-                
-                await contractInstance.createNewCharityCause("Test Charity", "Test Description", targetFunds, owner.address);
-                
-                await contractInstance.connect(otherAccount).donateToCharity(1, { value: targetFunds - 1 }); //1 wei less than target funds
-                
-                await expect(contractInstance.connect(owner).withdrawCallectedFunds(1)).to.be.revertedWith("Charity target is not fulfilled!");
+
+            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+
+            const targetFunds = 1000000000000000;
+
+            await contractInstance.createNewCharityCause("Test Charity", "Test Description", targetFunds, owner.address);
+
+            await contractInstance.connect(otherAccount).donateToCharity(1, { value: targetFunds - 1 }); //1 wei less than target funds
+
+            await expect(contractInstance.connect(owner).withdrawCallectedFunds(1)).to.be.revertedWith("Charity target is not fulfilled!");
         });
     });
 });

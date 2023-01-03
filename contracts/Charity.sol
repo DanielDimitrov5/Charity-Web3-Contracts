@@ -104,7 +104,7 @@ contract Charity {
     function changeTargetAddress(uint8 charityNumber) public 
     onlyCharityCreator(charityNumber) onlyCharityWithNewTargetAddress(charityNumber) {
         //Test values: should 7 days
-        // require((block.timestamp >= 30 seconds + timeStampProposedAddress[charityNumber]), "30 seconds should pass!");
+        require((block.timestamp >= 30 seconds + timeStampProposedAddress[charityNumber]), "30 seconds should pass!");
 
         charities[charityNumber].addressChangedOnce = true;
 
