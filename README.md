@@ -6,7 +6,5 @@
 
 ## 🛠 Built with:
 * [Hardhat](https://github.com/NomicFoundation/hardhat)
-<br />
 * [Mocha](https://github.com/mochajs/mocha)
-<br />
 * [Chai](https://github.com/chaijs/chai)
