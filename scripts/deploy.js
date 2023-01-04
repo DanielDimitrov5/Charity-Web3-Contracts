@@ -13,7 +13,7 @@ async function main() {
 
     await charity.deployed();
 
-    console.log("Dani deployed to:", charity.address);
+    console.log("Charity deployed to:", charity.address);
 
 }
 

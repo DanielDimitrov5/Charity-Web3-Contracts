@@ -106,7 +106,7 @@ describe("Charity", function () {
 
             const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
 
-            await expect(contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress)).to.emit(contractInstance, "ChangeTargetAddress").withArgs(1, newAddress);
+            await expect(contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress)).to.emit(contractInstance, "suggestTargetAddressChangeEvent").withArgs(1, newAddress);
         });
 
         it("should allow only charity creator to suggest target address change", async function () {
@@ -255,6 +255,21 @@ describe("Charity", function () {
 
             await expect(contractInstance.connect(owner).changeTargetAddress(1)).to.be.revertedWith("30 seconds should pass!");
         });
+
+        it("should emit event", async function () {
+            const { contractInstance, owner } = await loadFixture(deployOneYearLockFixture);
+
+            await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
+
+            const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
+
+            await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+            //forwad time with 30 seconds
+            time.increase(time.duration.seconds(30));
+
+            await expect(contractInstance.connect(owner).changeTargetAddress(1)).to.emit(contractInstance, 'targetAddressChangedEvent').withArgs(1, newAddress);
+        });
     });
 
     describe("withdraw donated funds from chariry", async function () {
@@ -309,6 +324,21 @@ describe("Charity", function () {
 
             await expect(contractInstance.connect(otherAccount).withdrawFundsFromCharity(1, 1000000000000000)).to.be.revertedWith("Only charities with a new target address can call this function!");
         });
+
+        it("should emit event when charity contributor withdraws funds", async function () {
+            const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+
+            await contractInstance.createNewCharityCause("Test Charity", "Test Description", 100, owner.address);
+
+            await contractInstance.connect(otherAccount).donateToCharity(1, { value: 1000000000000000 });
+
+            const newAddress = '0x106D801337670aa15bBF286Bd35080f8e3A36EA8';
+
+            await contractInstance.connect(owner).suggestTargetAddressChange(1, newAddress);
+
+            await expect(contractInstance.connect(otherAccount).withdrawFundsFromCharity(1, 1000000000000000 / 2))
+            .to.emit(contractInstance, "withdrawFundsFromCharityEvent").withArgs(1, otherAccount.address, 1000000000000000 / 2);
+        });
     });
 
     describe("send donated funds to target address", async function () {
@@ -344,6 +374,21 @@ describe("Charity", function () {
             await contractInstance.connect(otherAccount).donateToCharity(1, { value: targetFunds - 1 }); //1 wei less than target funds
 
             await expect(contractInstance.connect(owner).withdrawCallectedFunds(1)).to.be.revertedWith("Charity target is not fulfilled!");
+        });
+
+        it("should emit event when funds are sent to target address", async function () {
+                
+                const { contractInstance, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+    
+                const targetFunds = 1000000000000000;
+    
+                await contractInstance.createNewCharityCause("Test Charity", "Test Description", targetFunds, owner.address);
+    
+                await contractInstance.connect(otherAccount).donateToCharity(1, { value: targetFunds });
+    
+                await expect(contractInstance.connect(owner).withdrawCallectedFunds(1))
+                    .to.emit(contractInstance, "withdrawCallectedFundsEvent")
+                    .withArgs(1, owner.address, targetFunds);
         });
     });
 });
