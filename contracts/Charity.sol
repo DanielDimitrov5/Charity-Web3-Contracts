@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity 0.8.17;
 
 contract Charity {
+
     address public owner;
     address[] adminUsers;
 
@@ -11,23 +12,24 @@ contract Charity {
         adminUsers.push(msg.sender);
     }
 
-    event suggestTargetAddressChangeEvent(uint8, address newAddress);
+    event suggestTargetAddressChangeEvent(uint8, address);
     event donateToCharityEvent(uint8, address, uint256);
     event targetAddressChangedEvent(uint8, address);
     event withdrawFundsFromCharityEvent(uint8, address, uint256);
     event withdrawCallectedFundsEvent(uint8, address, uint256);
 
-
     struct CharityCause {
         uint8 id;
         address creator;
         string title;
-        string description;
         uint256 targetFunds;
-        // uint256 deadline;
+        uint256 deadline;
         address payable targetAddress;
         bool addressChangedOnce;
     }
+
+    mapping (uint8 => string[]) public descriptions;
+    mapping (uint8 => string[]) public imageHashes;
 
     uint8 counter = 1;
 
@@ -41,7 +43,8 @@ contract Charity {
     CharityCause[] public causes;
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only the owner can perform this action.");
+        require(msg.sender == owner, 
+        "Only the owner can perform this action.");
         _;
     }
 
@@ -86,18 +89,23 @@ contract Charity {
     function createNewCharityCause(
         string memory title,
         string memory description,
+        string memory imageHash,
         uint256 targetFunds,
+        uint256 deadline,
         address payable targetAddress
     ) public {
         CharityCause memory cause = CharityCause(
             counter,
             msg.sender,
             title,
-            description,
             targetFunds,
+            deadline,
             targetAddress,
             false
         );
+
+        descriptions[counter].push(description);
+        imageHashes[counter].push(imageHash);
 
         charities[counter] = cause;
         causes.push(cause);
@@ -109,9 +117,7 @@ contract Charity {
         return causes;
     }
 
-    function donateToCharity(
-        uint8 charityNumber
-    ) public payable charityExists(charityNumber) {
+    function donateToCharity(uint8 charityNumber) public payable charityExists(charityNumber) {
         require(
             !charityFulfiled(charityNumber),
             "Charity target is already fulfilled!"
@@ -127,10 +133,7 @@ contract Charity {
         return address(this).balance;
     }
 
-    function suggestTargetAddressChange(
-        uint8 charityNumber,
-        address newAddress
-    ) public onlyCharityCreator(charityNumber) {
+    function suggestTargetAddressChange(uint8 charityNumber, address newAddress) public onlyCharityCreator(charityNumber) {
         require(
             charities[charityNumber].addressChangedOnce == false,
             "Target address already changed once!"
@@ -154,10 +157,7 @@ contract Charity {
         emit suggestTargetAddressChangeEvent(charityNumber, newAddress);
     }
 
-    function changeTargetAddress(
-        uint8 charityNumber
-    )
-        public
+    function changeTargetAddress(uint8 charityNumber) public
         onlyCharityCreator(charityNumber)
         onlyCharityWithNewTargetAddress(charityNumber)
     {
@@ -176,29 +176,29 @@ contract Charity {
 
         newAddressProposals[charityNumber] = address(0);
 
-        emit targetAddressChangedEvent(charityNumber, charities[charityNumber].targetAddress);
+        emit targetAddressChangedEvent(
+            charityNumber,
+            charities[charityNumber].targetAddress
+        );
     }
 
     //Contributor withdraws funds back to his account
-    function withdrawFundsFromCharity(
-        uint8 charityNumber,
-        uint256 amount
-    )
-        public
+    function withdrawFundsFromCharity(uint8 charityNumber, uint256 amount) public
         onlyCharityContributors(charityNumber)
         onlyCharityWithNewTargetAddress(charityNumber)
     {
+        //Apply SafeMath
+
         charityContributors[charityNumber][msg.sender] -= amount;
         collectedFunds[charityNumber] -= amount;
+        
         payable(msg.sender).transfer(amount);
 
         emit withdrawFundsFromCharityEvent(charityNumber, msg.sender, amount);
     }
 
     //Charity creator sends the callected funds to the charity address
-    function withdrawCallectedFunds(
-        uint8 charityNumber
-    ) public onlyCharityCreator(charityNumber) {
+    function withdrawCallectedFunds(uint8 charityNumber) public onlyCharityCreator(charityNumber) {
         require(
             charityFulfiled(charityNumber),
             "Charity target is not fulfilled!"
@@ -208,16 +208,16 @@ contract Charity {
             collectedFunds[charityNumber]
         );
 
-        emit withdrawCallectedFundsEvent(charityNumber, charities[charityNumber].targetAddress, collectedFunds[charityNumber]);
+        emit withdrawCallectedFundsEvent(
+            charityNumber,
+            charities[charityNumber].targetAddress,
+            collectedFunds[charityNumber]
+        );
 
         collectedFunds[charityNumber] = 0;
     }
 
-    function charityFulfiled(
-        uint8 charityNumber
-    ) public view returns (bool fulfilled) {
-        fulfilled =
-            collectedFunds[charityNumber] >=
-            charities[charityNumber].targetFunds;
+    function charityFulfiled(uint8 charityNumber) public view returns (bool fulfilled) {
+        fulfilled = collectedFunds[charityNumber] >= charities[charityNumber].targetFunds;
     }
 }
