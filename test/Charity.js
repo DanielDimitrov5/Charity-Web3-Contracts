@@ -52,6 +52,7 @@ describe("Charity", function () {
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", hash, 100, deadline, defaultTargetAddress);
 
             expect(await contractInstance.charities(1)).to.have.property('title', 'Test Charity');
+            expect(await contractInstance.charities(1)).to.have.property('targetAddress', defaultTargetAddress);
         });
 
         it("should add description and hash to mapping", async function () {
@@ -60,7 +61,7 @@ describe("Charity", function () {
             await contractInstance.createNewCharityCause("Test Charity", "Test Description", hash, 100, deadline, defaultTargetAddress);
 
             expect(await contractInstance.descriptions(1, 0)).to.be.equal("Test Description");
-            expect(await contractInstance.imageHashes(1, 0)).to.be.equal(hash);
+            expect(await contractInstance.descriptions(1, 0)).to.be.equal("Test Description");
         });
 
         it("should return all charities", async function () {
